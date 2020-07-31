@@ -1,112 +1,106 @@
-const fs = require ('fs');
-const http = require ('http');
-const url = require ('url');
+const fs = require('fs');
+const http = require('http');
+const url = require('url');
 
+const slugify = require('slugify');
 
+const replaceTemplate = require('./modules/replaceTemplate');
 
 //////////////////////////
 // SERVER
 //////////////////////////
 
-const replaceTemplate = (template, {id, productName, from, nutrients, image, organic, quantity, price, description}) => {
+const productsData = fs.readFileSync(
+  `${__dirname}/dev-data/data.json`,
+  'utf-8'
+);
+const productsJSON = JSON.parse(productsData);
 
-    template = template.replace (/{%ID%}/g, id);
-    template = template.replace (/{%PRODUCT_NAME%}/g, productName);
-    template = template.replace (/{%FROM%}/, from)
-    template = template.replace (/{%IMAGE%}/g, image);
-    template = template.replace (/{%PRODUCT_NUTRIENTS%}/g, nutrients);
-    template = template.replace (/{%DESCRIPTION%}/g, description);
-    template = template.replace (/{%NOT_ORGANIC%}/g, organic ? '' : 'not-organic');
-    template = template.replace (/{%QUANTITY%}/g, quantity);
-    template = template.replace (/{%PRICE%}/g, price);
+const slugs = productsJSON.map((product) =>
+  slugify(product.productName, { lower: true })
+);
+console.log(slugs);
 
-    return template;
+const tempOverview = fs.readFileSync(
+  `${__dirname}/templates/template-overview.html`,
+  'utf-8'
+);
+const tempCard = fs.readFileSync(
+  `${__dirname}/templates/template-card.html`,
+  'utf-8'
+);
+const tempProduct = fs.readFileSync(
+  `${__dirname}/templates/template-product.html`,
+  'utf-8'
+);
 
-}
+const server = http.createServer((req, res) => {
+  const { query, pathname: pathName } = url.parse(req.url, true);
 
-const productsData = fs.readFileSync (`${__dirname}/dev-data/data.json`, 'utf-8');
-const productsJSON = JSON.parse (productsData);
+  console.log(url.parse(req.url, true));
 
-const tempOverview = fs.readFileSync (`${__dirname}/templates/template-overview.html`, 'utf-8');
-const tempCard = fs.readFileSync (`${__dirname}/templates/template-card.html`, 'utf-8');
-const tempProduct = fs.readFileSync (`${__dirname}/templates/template-product.html`, 'utf-8');
+  let statusCode = 200;
+  let headers = { 'Content-type': 'text/html', 'my-own-header': 'Found!' };
 
+  let response;
 
+  switch (pathName) {
+    //Overview page
+    case '/overview':
+    case '/':
+      const cardsHtml = productsJSON
+        .map((el) => replaceTemplate(tempCard, el))
+        .join('');
 
-const server = http.createServer ((req, res) => {
-    const {query, pathname : pathName} = url.parse (req.url, true);
+      response = tempOverview.replace('{%PRODUCT_CARDS%}', cardsHtml);
 
+      break;
 
-    let statusCode = 200;
-    let headers = {"Content-type": "text/html", "my-own-header": "Found!"};
+    // API
+    case '/api':
+      headers['Content-type'] = 'application/json';
+      response = productsData;
 
-    let response;
+      break;
 
-    switch (pathName)
-    {
-        //Overview page
-        case "/overview":
-        case "/":
+    // Not found
+    default:
+      statusCode = 404;
+      headers['my-own-header'] = 'Not found :(';
+      response = '<h1>Page not found!</h1>';
+  }
 
-            const cardsHtml = productsJSON.map (el => replaceTemplate (tempCard, el)).join ('');
+  if (pathName.startsWith('/product/')) {
+    const productSlug = pathName.slice(pathName.lastIndexOf('/') + 1);
 
-            response = tempOverview.replace ('{%PRODUCT_CARDS%}', cardsHtml);
+    if (query) {
+      const product = productsJSON.find(
+        ({ productName }) =>
+          slugify(productName, { lower: true }) == productSlug
+      );
 
-            break;
-
-        //Product page
-        case "/product":
-
-            if (query)
-            {
-                const product = productsJSON.find (({id}) => id == query.id);
-
-                response = replaceTemplate (tempProduct, product);
-            }
-            else 
-            {
-                response = 'Product not found.';
-                statusCode = 404;
-            }
-            break;
-
-
-        // API
-        case "/api":
-            
-            headers["Content-type"] = 'application/json';
-            response = productsData;
-
-            break;
-
-        // Not found
-        default:
-            statusCode = 404;
-            headers["my-own-header"] = "Not found :(";
-            response = '<h1>Page not found!</h1>';
-
+      response = replaceTemplate(tempProduct, product);
+    } else {
+      response = 'Product not found.';
+      statusCode = 404;
     }
+  }
 
-    const respond = () => 
-    {
-        res.writeHead (statusCode, headers);
-        res.end (response);
-    }
+  const respond = () => {
+    res.writeHead(statusCode, headers);
+    res.end(response);
+  };
 
-    if (response)
-        respond ();
-
-})
-
-server.listen (8000, '127.0.0.1', () => {
-    console.log ('Server started.');
+  if (response) respond();
 });
 
+server.listen(8000, '127.0.0.1', () => {
+  console.log('Server started.');
+});
 
 //////////////////////////
 // FILES
 //////////////////////////
-
 
 // Blocking, synchronous way
 /*
@@ -117,7 +111,6 @@ const textOut = `This is what we know about the avocado: ${textIn}.\nCreated on 
 fs.writeFileSync ('./txt/output.txt', textOut);
 console.log (fs.readFileSync ('./txt/output.txt', 'utf-8'));
 */
-
 
 // Non-blocking, asynchronous way
 
