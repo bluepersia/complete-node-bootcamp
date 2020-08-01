@@ -1,15 +1,21 @@
 {
   "name": "natours",
+  "engines": {
+    "node": ">=8.3.0"
+  },
   "version": "1.0.0",
   "description": "Learning node, express and mongoDB",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start:dev": "nodemon server.js",
+    "start:prod": "NODE_ENV=production nodemon server.js"
   },
   "author": "Marco Zimmermann",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "morgan": "^1.10.0"
-  }
+  },
+  "devDependencies": {}
 }
