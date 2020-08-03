@@ -21,9 +21,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// 2) ROUTES
+function initialize() {
+  //NOTE: Export App so that we can apply more middleware before ending the request/response cycle
 
-app.use('/api/v1/tours', tourRouter);
-app.use('/api/v1/users', userRouter);
+  // 2) ROUTES (End request/response cycle)
 
-module.exports = app;
+  app.use('/api/v1/tours', tourRouter);
+  app.use('/api/v1/users', userRouter);
+
+  return app;
+}
+
+module.exports.initialize = initialize;
+module.exports.app = app;

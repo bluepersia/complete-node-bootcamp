@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const QueryBuilder = require('./queryBuilder');
 
 const tourSchema = new mongoose.Schema({
   name: {
@@ -48,7 +49,8 @@ const tourSchema = new mongoose.Schema({
   images: [String],
   createdAt: {
     type: Date,
-    default: Date.now()
+    default: Date.now(),
+    select: false
   },
   startDates: [Date]
 });
@@ -61,8 +63,9 @@ module.exports.createTour = async function (tourData) {
   return newTour;
 };
 
-module.exports.getAllTours = async function () {
-  const allTours = Tour.find();
+module.exports.getAllTours = async function (query) {
+  const allTours = await new QueryBuilder(Tour.find(), query).BuildQuery()
+    .baseQuery;
 
   return allTours;
 };
@@ -92,4 +95,68 @@ module.exports.deleteAll = async () => {
   await Tour.deleteMany();
 
   return true;
+};
+
+module.exports.getTourStats = async () => {
+  const stats = await Tour.aggregate([
+    {
+      $match: { ratingsAverage: { $gte: 4.5 } }
+    },
+    {
+      $group: {
+        _id: { $toUpper: '$difficulty' },
+        num: { $sum: 1 },
+        numRatings: { $sum: '$ratingsQuantity' },
+        avgRating: { $avg: '$ratingsAverage' },
+        avgPrice: { $avg: '$price' },
+        minPrice: { $min: '$price' },
+        maxPrice: { $max: '$price' }
+      }
+    },
+    {
+      $sort: {
+        avgPrice: 1
+      }
+    }
+  ]);
+
+  return stats;
+};
+
+module.exports.getMonthlyPlan = async (year = Date.now()) => {
+  const monthlyPlan = await Tour.aggregate([
+    {
+      $unwind: '$startDates'
+    },
+    {
+      $match: {
+        startDates: {
+          $gte: new Date(`${year}-01-01`),
+          $lte: new Date(`${year}-12-31`)
+        }
+      }
+    },
+    {
+      $group: {
+        _id: { $month: '$startDates' },
+        numTourStarts: { $sum: 1 },
+        tours: { $push: '$name' }
+      }
+    },
+    {
+      $addFields: {
+        month: '$_id'
+      }
+    },
+    {
+      $project: {
+        _id: 0
+      }
+    },
+    {
+      $sort: { numTourStarts: -1 }
+    }
+  ]);
+
+  return monthlyPlan;
 };

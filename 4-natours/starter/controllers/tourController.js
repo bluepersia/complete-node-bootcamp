@@ -4,7 +4,9 @@ const {
   getAllTours,
   getTour,
   updateTour,
-  deleteTour
+  deleteTour,
+  getTourStats,
+  getMonthlyPlan
 } = require('../models/tourModel');
 
 let tours = JSON.parse(
@@ -21,7 +23,7 @@ function writeTours(callback) {
 
 module.exports.getAllTours = async (req, res) => {
   try {
-    const tours = await getAllTours();
+    const tours = await getAllTours(req.query);
 
     res.status(200).json({
       status: 'success',
@@ -33,7 +35,7 @@ module.exports.getAllTours = async (req, res) => {
   } catch (err) {
     res.status(404).json({
       status: 'fail',
-      message: err
+      message: String(err)
     });
   }
 };
@@ -66,7 +68,7 @@ module.exports.createTour = async (req, res) => {
   } catch (err) {
     res.status(400).json({
       status: 'fail',
-      message: err
+      message: String(err)
     });
   }
 };
@@ -111,7 +113,7 @@ module.exports.updateTour = async (req, res) => {
   } catch (err) {
     res.status(404).json({
       status: 'fail',
-      message: err
+      message: String(err)
     });
   }
 };
@@ -131,7 +133,51 @@ module.exports.deleteTour = async (req, res) => {
   } catch (err) {
     res.status(404).json({
       status: 'fail',
-      message: err
+      message: String(err)
     });
   }
+};
+
+module.exports.getTourStats = async (req, res) => {
+  try {
+    const stats = await getTourStats();
+
+    res.status(200).json({
+      status: 'success',
+      stats
+    });
+  } catch (err) {
+    res.status(404).json({
+      status: 'fail',
+      message: String(err)
+    });
+  }
+};
+
+module.exports.getMonthlyPlan = async (req, res) => {
+  try {
+    const year = Number(req.params.year);
+
+    const plan = await getMonthlyPlan(year);
+
+    res.status(200).json({
+      status: 'success',
+      plan
+    });
+  } catch (err) {
+    res.status(404).json({
+      status: 'fail',
+      message: String(err)
+    });
+  }
+};
+
+module.exports.aliasTopTours = (req, res, next) => {
+  const { query } = req;
+
+  query.limit = 5;
+  query.sort = '-ratingsAverage,price';
+  query.fields = 'name, price, ratingsAverage, summary, difficulty';
+
+  next();
 };
