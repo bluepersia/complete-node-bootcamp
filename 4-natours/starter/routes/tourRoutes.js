@@ -1,9 +1,7 @@
 const express = require('express');
 
 const {
-  checkID,
   getAllTours,
-  checkCreateBody,
   createTour,
   getTour,
   updateTour,

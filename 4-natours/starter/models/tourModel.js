@@ -146,8 +146,6 @@ module.exports.getAllTours = async function (query) {
 module.exports.getTour = async function (id) {
   const tour = await Tour.findById(id);
 
-  if (!tour) throw new Error('Invalid ID!');
-
   return tour;
 };
 
@@ -161,9 +159,9 @@ module.exports.updateTour = async function (id, tour) {
 };
 
 module.exports.deleteTour = async function (id) {
-  await Tour.findByIdAndDelete(id);
+  const tour = await Tour.findByIdAndDelete(id);
 
-  return true;
+  return tour;
 };
 
 module.exports.deleteAll = async () => {

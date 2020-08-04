@@ -1,44 +1,64 @@
 const express = require('express');
 const morgan = require('morgan');
+const AppError = require('./utils/appError');
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 
+const errorHandler = require('./middleware/errorHandler');
+
 const app = express();
 
-// 1) MIDDLEWARES
-if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
+const customMiddleware = {
+  preMiddleware: [],
+  postMiddleware: [],
+  preRouter: [],
+  postRouter: [],
+  preErrorHandler: []
+};
 
-app.use(express.json());
-app.use(express.static(`${__dirname}/public`));
+module.exports.customMiddleware = customMiddleware;
 
-app.use((req, res, next) => {
-  req.requestTime = new Date().toISOString();
-  next();
-});
+const {
+  preMiddleware,
+  postMiddleware,
+  preRouter,
+  postRouter,
+  preErrorHandler
+} = customMiddleware;
 
 function initialize() {
+  // 1) MIDDLEWARES
+
+  preMiddleware.forEach(middleware => app.use(middleware));
+
+  if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
+
+  app.use(express.json());
+  app.use(express.static(`${__dirname}/public`));
+
+  app.use((req, res, next) => {
+    req.requestTime = new Date().toISOString();
+    next();
+  });
+
+  postMiddleware.forEach(middleware => app.use(middleware));
+
+  preRouter.forEach(middleware => app.use(middleware));
+
   // 2) ROUTES (End request/response cycle)
 
   app.use('/api/v1/tours', tourRouter);
   app.use('/api/v1/users', userRouter);
 
+  postRouter.forEach(middleware => app.use(middleware));
+
   app.all('*', (req, res, next) => {
-    const err = new Error(`Can't find ${req.originalUrl} on this server!`);
-    err.status = 'fail';
-    err.statusCode = 404;
-
-    next(err);
+    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
   });
 
-  app.use((err, req, res, next) => {
-    const statusCode = err.statusCode || 500;
-    const status = err.status || 'error';
+  preErrorHandler.forEach(middleware => app.use(middleware));
 
-    res.status(statusCode).json({
-      status,
-      message: err.message
-    });
-  });
+  app.use(errorHandler);
 
   return app;
 }

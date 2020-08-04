@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
-const { app } = require('./app');
+const { customMiddleware } = require('./app');
+const mongooseErrorHandler = require('./middleware/mongooseErrorHandler');
+
+customMiddleware.preErrorHandler.push(mongooseErrorHandler);
 
 require('./dotenvconfig');
 

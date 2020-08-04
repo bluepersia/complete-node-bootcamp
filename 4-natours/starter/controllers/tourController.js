@@ -1,4 +1,7 @@
 const fs = require('fs');
+const catchAsync = require('./catchAsync');
+const sendResponse = require('./sendResponse');
+const AppError = require('../utils/appError');
 const {
   createTour,
   getAllTours,
@@ -21,156 +24,70 @@ function writeTours(callback) {
   );
 }
 
-module.exports.getAllTours = async (req, res) => {
-  try {
-    const tours = await getAllTours(req.query);
+module.exports.getAllTours = catchAsync(async (req, res, next) => {
+  const tours = await getAllTours(req.query);
 
-    res.status(200).json({
-      status: 'success',
-      results: tours.length,
-      data: {
-        tours
-      }
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: 'fail',
-      message: String(err)
-    });
-  }
-};
+  sendResponse(res, 200, { tours }, { results: tours.length });
+});
 
-module.exports.checkCreateBody = (req, res, next) => {
+module.exports.createTour = catchAsync(async (req, res, next) => {
+  const tour = await createTour(req.body);
+
+  if (!tour) return next(new AppError(`Failed to create tour!`, 500));
+
+  sendResponse(res, 201, { tour });
+});
+
+module.exports.getTour = catchAsync(async (req, res, next) => {
   const {
-    body: { name, price }
+    params: { id }
   } = req;
 
-  if (name && price) {
-    next();
-    return;
-  }
+  const tour = await getTour(id);
 
-  res.status(400).json({
-    status: 'fail',
-    message: 'Name and price were not provided.'
-  });
-};
-module.exports.createTour = async (req, res) => {
-  try {
-    const tour = await createTour(req.body);
+  if (!tour) return next(new AppError(`ID ${id} doesn't exist`, 404));
 
-    res.status(201).json({
-      status: 'success',
-      data: {
-        tour
-      }
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      message: String(err)
-    });
-  }
-};
+  sendResponse(res, 200, { tour });
+});
 
-module.exports.getTour = async (req, res) => {
-  try {
-    const {
-      params: { id }
-    } = req;
+module.exports.updateTour = catchAsync(async (req, res, next) => {
+  const {
+    params: { id },
+    body
+  } = req;
 
-    const tour = await getTour(id);
+  const tour = await updateTour(id, body);
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        tour
-      }
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      message: 'Invalid ID!'
-    });
-  }
-};
+  if (!tour) return next(new AppError(`ID ${id} doesn't exist`, 404));
 
-module.exports.updateTour = async (req, res) => {
-  try {
-    const {
-      params: { id },
-      body
-    } = req;
+  sendResponse(res, 200, { tour });
+});
 
-    const tour = await updateTour(id, body);
+module.exports.deleteTour = catchAsync(async (req, res, next) => {
+  const {
+    params: { id }
+  } = req;
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        tour
-      }
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: 'fail',
-      message: String(err)
-    });
-  }
-};
+  const tour = await deleteTour(id);
 
-module.exports.deleteTour = async (req, res) => {
-  try {
-    const {
-      params: { id }
-    } = req;
+  if (!tour) return next(new AppError(`ID ${id} doesn't exist`, 404));
 
-    await deleteTour(id);
+  sendResponse(res, 204);
+});
 
-    res.status(204).json({
-      status: 'success',
-      data: null
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: 'fail',
-      message: String(err)
-    });
-  }
-};
+module.exports.getTourStats = catchAsync(async (req, res) => {
+  const stats = await getTourStats();
 
-module.exports.getTourStats = async (req, res) => {
-  try {
-    const stats = await getTourStats();
+  sendResponse(res, 200, { stats });
+});
 
-    res.status(200).json({
-      status: 'success',
-      stats
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: 'fail',
-      message: String(err)
-    });
-  }
-};
+module.exports.getMonthlyPlan = catchAsync(async (req, res) => {
+  const year = Number(req.params.year);
 
-module.exports.getMonthlyPlan = async (req, res) => {
-  try {
-    const year = Number(req.params.year);
+  const plan = await getMonthlyPlan(year);
 
-    const plan = await getMonthlyPlan(year);
-
-    res.status(200).json({
-      status: 'success',
-      plan
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: 'fail',
-      message: String(err)
-    });
-  }
-};
+  sendResponse(res, 200, { plan });
+});
 
 module.exports.aliasTopTours = (req, res, next) => {
   const { query } = req;
