@@ -42,7 +42,10 @@ class QueryBuilder {
   }
 
   BuildQuery() {
-    return this.Filter().Sort().SelectFields().Paginate();
+    return this.Filter()
+    .Sort()
+    .SelectFields()
+    .Paginate();
   }
 }
 
