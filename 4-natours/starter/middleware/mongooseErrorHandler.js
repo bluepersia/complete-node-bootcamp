@@ -5,11 +5,30 @@ module.exports = (err, req, res, next) => {
 
   if (NODE_ENV == 'production') {
     if (err.name == 'CastError') return next(handleCastErrorDB(err));
+    if (err.code == 11000) return next(handleDuplicateFields(err));
+
+    if (err._message == 'Validation failed')
+      return next(handleValidationError(err));
   }
 
   next(err);
 };
 
 function handleCastErrorDB(err) {
-  return new AppError(`Invalid ${err.path}: ${err.value}.`, 500);
+  return new AppError(`Invalid ${err.path}: ${err.value}.`, 400);
+}
+
+function handleDuplicateFields(err) {
+  return new AppError(
+    `Duplicate field value: ${err.keyValue.name}. Please use another value!`,
+    400
+  );
+}
+
+function handleValidationError(err) {
+  const messages = Object.values(err.errors).map(
+    ({ properties }) => properties.message
+  );
+
+  return new AppError(messages.join('. '), 400);
 }
