@@ -18,15 +18,15 @@ const customMiddleware = {
 
 module.exports.customMiddleware = customMiddleware;
 
-const {
-  preMiddleware,
-  postMiddleware,
-  preRouter,
-  postRouter,
-  preErrorHandler
-} = customMiddleware;
-
 function initialize() {
+  const {
+    preMiddleware,
+    postMiddleware,
+    preRouter,
+    postRouter,
+    preErrorHandler
+  } = customMiddleware;
+
   // 1) MIDDLEWARES
 
   preMiddleware.forEach(middleware => app.use(middleware));
@@ -57,6 +57,7 @@ function initialize() {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
   });
 
+  console.log(preErrorHandler);
   preErrorHandler.forEach(middleware => app.use(middleware));
 
   app.use(errorHandler);

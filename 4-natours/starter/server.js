@@ -1,3 +1,5 @@
+const globalErrorHandler = require('./middleware/globalErrorHandler');
+
 function close() {
   if (server) {
     server.close(() => {
@@ -11,7 +13,7 @@ function close() {
 }
 
 process.on('uncaughtException', err => {
-  console.log(err.name, err.message);
+  console.error(err);
   console.log('UNHANDLED EXCEPTION! Shutting down...');
 
   close();
@@ -21,7 +23,9 @@ require('./dotenvconfig');
 
 require('./database');
 
-const { initialize, app } = require('./app');
+const { customMiddleware, initialize, app } = require('./app');
+
+customMiddleware.preErrorHandler.push(globalErrorHandler);
 
 initialize();
 
@@ -32,7 +36,7 @@ const server = app.listen(port, () => {
 });
 
 process.on('unhandledRejection', err => {
-  console.log(err.name, err.message);
+  console.error(err);
   console.log('UNHANDLED REJECTION! Shutting down...');
 
   close();

@@ -1,5 +1,5 @@
 const fs = require('fs');
-const catchAsync = require('./catchAsync');
+const catchAsync = require('../utils/catchAsync');
 const sendResponse = require('./sendResponse');
 const AppError = require('../utils/appError');
 const {
